@@ -1,4 +1,4 @@
-# AI Oracle Template
+# Chain GPT AI Oracle
 
 > This project is developed as part of the **ChainGPT Web3 AI Grant Program**:
 > [https://www.chaingpt.org/web3-ai-grant](https://www.chaingpt.org/web3-ai-grant)
