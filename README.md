@@ -210,6 +210,38 @@ It can be extended to incorporate additional ChainGPT APIs depending on the stra
 
 
 
+# Local Testing (Sepolia)
+
+- **Mock Trade Executor**: `0xC9a062736625E9bD8c9b2d4c7d8F5a8Fcb07d35D` (verified on [Sepolia Blockscout](https://eth-sepolia.blockscout.com/address/0xC9a062736625E9bD8c9b2d4c7d8F5a8Fcb07d35D?tab=contract))
+- **HTTP Request template**: `docs/http/NEWS_AI_TRADE.http`
+
+Example using the `.http` file (or curl/Postman):
+
+```
+POST http://localhost:3000/oracle/news
+Content-Type: application/json
+```
+
+### Example Responses
+
+```
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 99
+ETag: W/"63-iFGA70bZlH2C4IsrAecRpn/t6Fk"
+Date: Sat, 21 Feb 2026 14:11:57 GMT
+Connection: close
+
+{
+  "action": "NO_ACTION",
+  "rawResponse": "{\"sentiment\":\"NEUTRAL\",\"confidence\":0.5}",
+  "txHash": null
+}
+```
+
+Other valid responses mirror the same structure, with `action` set to `BUY` or `SELL` and `txHash` populated once a transaction is mined.
+
 # Development Commands
 
 ```bash
@@ -218,5 +250,3 @@ pnpm run build
 pnpm run start:prod
 pnpm run lint
 pnpm run test
-```
-
