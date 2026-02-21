@@ -12,7 +12,7 @@ The system is designed as infrastructure, not a trading bot, not a news tool,  b
 📘 Detailed integration guide:
 See [docs/AI_ORACLE_TEMPLATE_QUICKSTART.md](docs/AI_ORACLE_TEMPLATE_QUICKSTART.md)
 
----
+
 
 # What This Project Is
 
@@ -36,7 +36,7 @@ This repository demonstrates a reference implementation using:
 * Ethers.js (for blockchain interaction)
 * NestJS (as the orchestration layer)
 
----
+
 
 # Architecture Overview
 
@@ -65,7 +65,7 @@ Each strategy defines:
 
 Adding a new AI workflow only requires implementing a new strategy module.
 
----
+
 
 # Project Structure
 
@@ -82,7 +82,7 @@ docs/
  └── AI_ORACLE_TEMPLATE_QUICKSTART.md
 ```
 
----
+
 
 # Requirements
 
@@ -92,7 +92,7 @@ docs/
 * RPC endpoint (e.g., Sepolia)
 * Private key for oracle signer
 
----
+
 
 # Installation
 
@@ -110,7 +110,7 @@ cd ai-oracle-template
 pnpm install
 ```
 
----
+
 
 # Environment Setup
 
@@ -131,7 +131,7 @@ CHAIN_ID=11155111
 
 Do not commit `.env` to version control.
 
----
+
 
 # Running the Application
 
@@ -148,7 +148,7 @@ pnpm run build
 pnpm run start:prod
 ```
 
----
+
 
 # Example Workflow Included
 
@@ -162,7 +162,7 @@ The repository contains a sample `NewsSentimentStrategy` to demonstrate:
 
 The goal is to showcase the **template mechanism**, not to provide financial automation.
 
----
+
 
 # How to Extend
 
@@ -178,7 +178,7 @@ To implement a new AI-powered automation:
 
 No modifications to the core execution service are required.
 
----
+
 
 # Security Considerations
 
@@ -197,7 +197,7 @@ In production environments, consider:
 * Event auditing
 * Optional cryptographic attestations
 
----
+
 
 # Supported ChainGPT Services
 
@@ -208,7 +208,7 @@ This template integrates with:
 
 It can be extended to incorporate additional ChainGPT APIs depending on the strategy design.
 
----
+
 
 # Development Commands
 
