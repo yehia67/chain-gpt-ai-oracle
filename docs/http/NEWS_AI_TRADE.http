@@ -1,0 +1,5 @@
+//# then: POST http://localhost:3000/oracle/news
+### Trigger the news sentiment oracle
+POST http://localhost:3000/oracle/news
+Content-Type: application/json
+
