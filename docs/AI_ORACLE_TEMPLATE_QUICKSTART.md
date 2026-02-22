@@ -58,6 +58,7 @@ Set environment variables:
 export CHAINGPT_API_KEY="sk-***"
 export RPC_URL="https://sepolia.infura.io/v3/..."
 export PRIVATE_KEY="0x..."
+export CONTRACT_ADDRESS="0x..."
 ```
 
 ---
@@ -65,19 +66,32 @@ export PRIVATE_KEY="0x..."
 ## 3. Installing Dependencies
 
 ```bash
-npm install @chaingpt/generalchat
-npm install @chaingpt/ainews
-npm install ethers dotenv
+pnpm install
 ```
 
 ---
 
 ## 4. Core Engine Usage
 
-The Core Engine executes a strategy:
+The Core Engine executes a strategy.
+
+In this repository, the full flow is exposed via a NestJS HTTP endpoint:
+
+```
+POST /oracle/news
+```
+
+The controller orchestrates:
+
+1. Fetch ETH news
+2. Execute strategy via the core engine
+3. Execute blockchain action (if not `NO_ACTION`)
+
+If you want to call the engine directly (without HTTP), the programmatic shape is:
 
 ```ts
-await aiOracle.execute(strategy, inputData);
+const result = await aiOracleEngine.execute(strategy, inputData);
+// result = { action: { type: 'BUY' | 'SELL' | 'NO_ACTION' }, rawResponse: string }
 ```
 
 ### Internal Flow
@@ -87,6 +101,8 @@ await aiOracle.execute(strategy, inputData);
 3. Validate structured JSON
 4. Map decision to transaction
 5. Submit transaction
+
+Note: In the current implementation, step (5) is skipped if the action is `NO_ACTION`.
 
 ---
 
@@ -111,10 +127,22 @@ const ainews = new AINews({
 
 const news = await ainews.getNews({
   tokenId: [80],      // Ethereum (ETH)
-  limit: 5,
+  limit: 3,
   sortBy: 'createdAt'
 });
 ```
+
+SDK response shape note: the ChainGPT AI News SDK currently returns `data` as a direct array:
+
+```json
+{
+  "statusCode": 200,
+  "message": "Request Successful",
+  "data": []
+}
+```
+
+The current service implementation handles empty `data` by returning a placeholder news item so the pipeline remains runnable.
 
 ---
 
@@ -173,6 +201,8 @@ The template enforces schema:
 }
 ```
 
+In code, this is represented as `OracleDecision`.
+
 If validation fails:
 
 * Reject execution
@@ -222,6 +252,9 @@ contract MockTradeExecutor {
 
 Only the AI Oracle signer can execute actions.
 
+Note: the example above shows an `onlyOracle` guard.
+The repository includes a simplified mock contract used for testing; ensure your deployed contract behavior matches your desired access-control model.
+
 ---
 
 ## 7. Extending the Template
@@ -268,9 +301,11 @@ Always abort execution if decision validation fails.
 ## 10. End-to-End Execution Example
 
 ```ts
-await aiOracle.execute(new NewsSentimentStrategy(), {
-  tokenId: 80
-});
+// HTTP (recommended for this repo)
+// POST http://localhost:3000/oracle/news
+
+// Programmatic (core engine)
+await aiOracleEngine.execute(new NewsSentimentStrategy(), newsItems);
 ```
 
 Output:
