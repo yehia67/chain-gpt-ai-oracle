@@ -1,0 +1,7 @@
+node_modules
+dist
+.git
+.gitignore
+coverage
+hardhat/artifacts
+hardhat/cache

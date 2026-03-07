@@ -1,0 +1,186 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/yehiatarek/Documents/projects/typescript/ai-oracle-template/contracts/IdentityRegistry.sol": {
+      "lastModificationDate": 1772799096199,
+      "contentHash": "e3f611ba335fad1d9b7e5fd7f194d49f",
+      "sourceName": "contracts/IdentityRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IdentityRegistry"
+      ]
+    },
+    "/Users/yehiatarek/Documents/projects/typescript/ai-oracle-template/contracts/MockTradeExecutor.sol": {
+      "lastModificationDate": 1771774475118,
+      "contentHash": "1ec24232391db8e75340ee8d1d575db4",
+      "sourceName": "contracts/MockTradeExecutor.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "MockTradeExecutor"
+      ]
+    },
+    "/Users/yehiatarek/Documents/projects/typescript/ai-oracle-template/contracts/MockTradeExecutorV2.sol": {
+      "lastModificationDate": 1772799096204,
+      "contentHash": "7c4f043c281659f3460a0627672770fe",
+      "sourceName": "contracts/MockTradeExecutorV2.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IValidationRegistry",
+        "MockTradeExecutorV2"
+      ]
+    },
+    "/Users/yehiatarek/Documents/projects/typescript/ai-oracle-template/contracts/ReputationRegistry.sol": {
+      "lastModificationDate": 1772799096203,
+      "contentHash": "6b565201b01424a68525542b8fefa992",
+      "sourceName": "contracts/ReputationRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ReputationRegistry"
+      ]
+    },
+    "/Users/yehiatarek/Documents/projects/typescript/ai-oracle-template/contracts/ValidationRegistry.sol": {
+      "lastModificationDate": 1772799096201,
+      "contentHash": "533f47ee97e32b205f368f97413f3a71",
+      "sourceName": "contracts/ValidationRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ValidationRegistry"
+      ]
+    }
+  }
+}

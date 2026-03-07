@@ -1,352 +1,267 @@
-# AI Oracle Template – QuickStart Guide
+# AI Oracle Template – QuickStart (A2A ERC-8004 Sepolia MVP)
 
-The **AI Oracle Template** provides a reusable execution framework that converts ChainGPT AI outputs into deterministic on-chain transactions.
+This QuickStart explains the implemented end-to-end architecture for:
 
-It is designed to integrate with:
-
-* **ChainGPT Web3 LLM API** (`/chat/stream`)
-* **ChainGPT AI News SDK** (`@chaingpt/ainews`)
-* Any EVM-compatible smart contract
-
-The template separates **AI reasoning**, **decision validation**, and **transaction execution**, ensuring safe and structured AI-driven automation.
+- ChainGPT reasoning
+- Deterministic decision hashing
+- ERC-8004-style A2A identity/validation/reputation registries
+- Validation-gated on-chain execution on Sepolia
 
 ---
 
-## 1. Overview
+## 1. Architecture
 
-The AI Oracle Template acts as a bridge:
-
+```text
+Data Source -> ChainGPT LLM -> Structured Decision -> DataHash
+-> ValidationRegistry -> MockTradeExecutorV2 (buy/sell)
+-> ReputationRegistry feedback
 ```
-Data Source → ChainGPT AI → Structured Decision → On-Chain Transaction
-```
 
-It is composed of two layers:
+### Runtime model
 
-### Core Engine (Reusable)
-
-* Calls ChainGPT Web3 LLM
-* Enforces strict JSON schema
-* Validates decision
-* Maps decision to transaction
-* Submits transaction on-chain
-
-### Strategy Module (Use Case-Specific)
-
-* Defines data source (News, Governance, Compliance, etc.)
-* Defines prompt
-* Defines decision schema
-* Defines execution mapping
-
-The Core Engine does not know business logic.
-Strategies define behavior.
+- `POST /oracle/news` is **async** and returns `202` with a `taskId`.
+- Worker processes pending tasks in the background.
+- `GET /oracle/tasks/:taskId` exposes full lifecycle and execution result.
 
 ---
 
-## 2. Prerequisites ✔︎
+## 2. Prerequisites
 
-| Requirement      | Notes                             |
-| ---------------- | --------------------------------- |
-| ChainGPT API Key | Create via AI Hub → API Dashboard |
-| Node.js ≥ 16     | Required for SDK usage            |
-| EVM RPC URL      | e.g. Sepolia RPC                  |
-| Private Key      | For oracle signer                 |
-| Credits          | LLM: 0.5 credits/request          |
+| Requirement | Notes |
+| --- | --- |
+| Node.js 20+ | Build, NestJS, Hardhat |
+| pnpm | Package manager |
+| PostgreSQL | Durable task tracking |
+| Sepolia ETH | For deployment + tx execution |
+| ChainGPT API Key | LLM + News SDK |
+| Pinata JWT | IPFS pinning for agent/proof/feedback JSON |
 
-Set environment variables:
+Copy and fill env values:
 
 ```bash
-export CHAINGPT_API_KEY="sk-***"
-export RPC_URL="https://sepolia.infura.io/v3/..."
-export PRIVATE_KEY="0x..."
-export CONTRACT_ADDRESS="0x..."
+cp .env.example .env
+```
+
+Required variables include:
+
+```bash
+CHAINGPT_API_KEY=sk-...
+RPC_URL=https://sepolia.infura.io/v3/...
+PRIVATE_KEY=0x...
+CHAIN_ID=11155111
+PINATA_JWT=...
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_oracle?schema=public
 ```
 
 ---
 
-## 3. Installing Dependencies
+## 3. Install + DB
 
 ```bash
 pnpm install
+pnpm prisma:generate
+pnpm prisma:migrate:deploy
 ```
 
 ---
 
-## 4. Core Engine Usage
+## 4. Deploy Contracts to Sepolia
 
-The Core Engine executes a strategy.
+Compile contracts:
 
-In this repository, the full flow is exposed via a NestJS HTTP endpoint:
-
+```bash
+pnpm hardhat:compile
 ```
+
+Deploy Identity/Validation/Reputation + trade executor:
+
+```bash
+pnpm hardhat:deploy:sepolia
+```
+
+Deployment script writes:
+
+- `deployments/sepolia.json`
+
+Use output addresses to set:
+
+- `A2A_IDENTITY_REGISTRY_ADDRESS`
+- `A2A_VALIDATION_REGISTRY_ADDRESS`
+- `A2A_REPUTATION_REGISTRY_ADDRESS`
+- `CONTRACT_ADDRESS`
+
+Optional explorer verification:
+
+```bash
+pnpm hardhat:verify:sepolia
+```
+
+---
+
+## 5. Register Agent Identity (IPFS + On-chain)
+
+Pin agent card to IPFS:
+
+```bash
+pnpm agent:pin
+```
+
+Register URI in Identity Registry:
+
+```bash
+AGENT_URI=ipfs://... pnpm agent:register
+```
+
+The card includes:
+
+- `agent_id` (CAIP-10 style)
+- `name`, `description`
+- `capabilities`
+- `evm_address`
+- schema tag `erc8004/identity/v1`
+
+---
+
+## 6. Start Application
+
+```bash
+pnpm build
+pnpm start:prod
+```
+
+Dev mode:
+
+```bash
+pnpm start:dev
+```
+
+Worker polling interval is controlled by:
+
+```bash
+WORKER_POLL_MS=10000
+```
+
+---
+
+## 7. API Usage
+
+### 7.1 Create task
+
+```http
 POST /oracle/news
 ```
 
-The controller orchestrates:
-
-1. Fetch ETH news
-2. Execute strategy via the core engine
-3. Execute blockchain action (if not `NO_ACTION`)
-
-If you want to call the engine directly (without HTTP), the programmatic shape is:
-
-```ts
-const result = await aiOracleEngine.execute(strategy, inputData);
-// result = { action: { type: 'BUY' | 'SELL' | 'NO_ACTION' }, rawResponse: string }
-```
-
-### Internal Flow
-
-1. Build prompt
-2. Call ChainGPT Web3 LLM
-3. Validate structured JSON
-4. Map decision to transaction
-5. Submit transaction
-
-Note: In the current implementation, step (5) is skipped if the action is `NO_ACTION`.
-
----
-
-## 5. Example Strategy: AI News Sentiment Executor
-
-This strategy:
-
-* Fetches latest ETH-related news
-* Uses Web3 LLM to classify sentiment
-* Executes buy/sell based on AI decision
-
----
-
-### 5.1 Fetch AI News
-
-```ts
-import { AINews } from '@chaingpt/ainews';
-
-const ainews = new AINews({
-  apiKey: process.env.CHAINGPT_API_KEY
-});
-
-const news = await ainews.getNews({
-  tokenId: [80],      // Ethereum (ETH)
-  limit: 3,
-  sortBy: 'createdAt'
-});
-```
-
-SDK response shape note: the ChainGPT AI News SDK currently returns `data` as a direct array:
+Response (`202`):
 
 ```json
 {
-  "statusCode": 200,
-  "message": "Request Successful",
-  "data": []
+  "taskId": "...",
+  "status": "PENDING_VALIDATION",
+  "action": "BUY",
+  "validationRequestId": "12"
 }
 ```
 
-The current service implementation handles empty `data` by returning a placeholder news item so the pipeline remains runnable.
+If action is `NO_ACTION`, status becomes `COMPLETED_NO_ACTION` and no validation/tx is requested.
 
----
+### 7.2 Query task
 
-### 5.2 Strategy Prompt Design
-
-The strategy builds a deterministic prompt:
-
-```
-You are a crypto sentiment classifier.
-
-Evaluate the overall sentiment for ETH based on the following news.
-
-Return ONLY valid JSON:
-
-{
-  "sentiment": "POSITIVE" | "NEGATIVE" | "NEUTRAL",
-  "confidence": number
-}
-
-News:
-1. Title: ...
-   Summary: ...
+```http
+GET /oracle/tasks/:taskId
 ```
 
-Strict JSON is mandatory.
+Response includes:
 
----
+- `status` (`PENDING_VALIDATION`, `PROCESSING`, `EXECUTED`, `REJECTED`, `FAILED`, `COMPLETED_NO_ACTION`)
+- `action`
+- `validationRequestId`
+- `validationStatus`, `executionStatus`
+- `txHash`
+- `validationProofUri`, `feedbackUri`
+- `errorMessage`
 
-### 5.3 Calling ChainGPT Web3 LLM
+### 7.3 Health check
 
-```ts
-import { GeneralChat } from "@chaingpt/generalchat";
-
-const chat = new GeneralChat({
-  apiKey: process.env.CHAINGPT_API_KEY
-});
-
-const response = await chat.createChatBlob({
-  question: prompt,
-  chatHistory: "off"
-});
-
-const rawOutput = response.data.bot;
+```http
+GET /health
 ```
 
 ---
 
-### 5.4 Decision Validation
+## 8. Worker Lifecycle (Implemented)
 
-The template enforces schema:
+For tasks with `BUY` or `SELL`:
 
-```ts
-{
-  sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL",
-  confidence: number
-}
+1. Compute deterministic `dataHash` from canonical payload.
+2. Call `requestValidation(...)` on Validation Registry.
+3. Worker checks validation state.
+4. If no response yet, worker pins proof JSON to IPFS and submits validator response.
+5. If verified, worker executes `buy(validationRequestId)` or `sell(validationRequestId)`.
+6. Worker pins feedback JSON and submits feedback URI to Reputation Registry.
+7. Task marked `EXECUTED`; else `REJECTED`/`FAILED`.
+
+---
+
+## 9. Smart Contract Interfaces (Deployed)
+
+- `IdentityRegistry`: `registerAgent`, `getAgent`
+- `ValidationRegistry`: `requestValidation`, `submitValidationResponse`, `getValidation`, `isVerified`
+- `ReputationRegistry`: `submitFeedback`, `getFeedback`
+- `MockTradeExecutorV2`: `buy(uint256)`, `sell(uint256)` with validation gate + replay protection
+
+---
+
+## 10. Docker Deployment (VPS)
+
+Build and run:
+
+```bash
+docker compose up --build -d
 ```
 
-In code, this is represented as `OracleDecision`.
+Included services:
 
-If validation fails:
-
-* Reject execution
-* Log AI output
-* Abort transaction
+- `db`: PostgreSQL
+- `app`: NestJS API + background worker
 
 ---
 
-### 5.5 Execution Mapping
+## 11. Test Matrix
 
-| Sentiment | Action |
-| --------- | ------ |
-| POSITIVE  | buy()  |
-| NEGATIVE  | sell() |
-| NEUTRAL   | noop   |
+Backend tests:
 
-Example transaction submission:
-
-```ts
-await contract.buy();
+```bash
+pnpm test
 ```
 
----
+Contract tests:
 
-## 6. Smart Contract Example (Mock Executor)
-
-```solidity
-contract MockTradeExecutor {
-    address public oracle;
-
-    event TradeExecuted(string action);
-
-    modifier onlyOracle() {
-        require(msg.sender == oracle);
-        _;
-    }
-
-    function buy() external onlyOracle {
-        emit TradeExecuted("BUY");
-    }
-
-    function sell() external onlyOracle {
-        emit TradeExecuted("SELL");
-    }
-}
+```bash
+pnpm hardhat:test
 ```
 
-Only the AI Oracle signer can execute actions.
+Coverage includes:
 
-Note: the example above shows an `onlyOracle` guard.
-The repository includes a simplified mock contract used for testing; ensure your deployed contract behavior matches your desired access-control model.
-
----
-
-## 7. Extending the Template
-
-The same Core Engine supports additional strategies:
-
-| Strategy          | Data Source   | Action             |
-| ----------------- | ------------- | ------------------ |
-| GovernanceRisk    | Proposal Text | Approve / Reject   |
-| ComplianceCheck   | Legal Text    | Mint / Block       |
-| ExploitMonitor    | News          | Pause Contract     |
-| TreasuryRebalance | Macro News    | Risk-On / Risk-Off |
-
-Only the Strategy module changes.
-The template remains identical.
+- deterministic data hashing
+- lifecycle status transitions
+- blockchain adapter error handling
+- validation-gated execution + replay protection
+- identity/reputation registry behavior
 
 ---
 
-## 8. Error Handling
+## 12. End-to-End Sepolia Runbook
 
-Handle errors for:
-
-* Invalid API key (401)
-* Insufficient credits (402/403)
-* Rate limit (429)
-* Malformed JSON
-* Transaction failure
-
-Always abort execution if decision validation fails.
-
----
-
-## 9. Security Best Practices
-
-* Never execute free-text LLM responses
-* Enforce strict JSON parsing
-* Log raw AI output
-* Store decision hash for auditability
-* Keep API keys server-side only
-* Consider adding ZK proofs in future versions
+1. Fund the EOA from `.env` on Sepolia.
+2. Deploy contracts (`pnpm hardhat:deploy:sepolia`).
+3. Set deployed addresses in `.env`.
+4. Pin and register agent card (`pnpm agent:pin`, `pnpm agent:register`).
+5. Run DB migration (`pnpm prisma:migrate:deploy`).
+6. Start app (`pnpm start:prod` or Docker).
+7. Call `POST /oracle/news` and store `taskId`.
+8. Poll `GET /oracle/tasks/:taskId`.
+9. Confirm validation + trade tx on Sepolia explorer.
 
 ---
 
-## 10. End-to-End Execution Example
-
-```ts
-// HTTP (recommended for this repo)
-// POST http://localhost:3000/oracle/news
-
-// Programmatic (core engine)
-await aiOracleEngine.execute(new NewsSentimentStrategy(), newsItems);
-```
-
-Output:
-
-```
-AI Decision: POSITIVE
-Confidence: 0.82
-Transaction Submitted: BUY
-Tx Hash: 0x...
-```
-
----
-
-## 11. Architecture Summary
-
-The AI Oracle Template:
-
-* Uses ChainGPT AI for reasoning
-* Enforces deterministic decision structure
-* Converts AI output into smart contract execution
-* Separates infrastructure from business logic
-* Enables reusable AI-driven automation across Web3 systems
-
----
-
-## 12. Future Extensions
-
-* ZK-verified AI decisions
-* Multi-agent orchestration
-* Threshold-based execution policies
-* ERC-8004 intent resolution
-* FHE-based private policy evaluation
-
----
-
-This document demonstrates how to use:
-
-* **ChainGPT Web3 LLM API**
-* **ChainGPT AI News SDK**
-* Deterministic AI decision mapping
-* On-chain transaction execution
-
-The AI Oracle Template serves as a reusable AI-to-blockchain execution layer for Web3 automation.
-
+This implementation is intentionally modular so you can later replace single-validator logic with multi-validator consensus and add escrowed ETH/USDC payouts without changing the core AI engine.
