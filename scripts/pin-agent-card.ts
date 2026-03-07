@@ -20,16 +20,44 @@ async function main() {
 
   const wallet = new Wallet(privateKey);
   const chainId = Number(process.env.CHAIN_ID ?? 11155111);
+  const identityRegistryAddress =
+    process.env.A2A_IDENTITY_REGISTRY_ADDRESS ??
+    '0x8004A818BFB912233c491871b3d84c89A494BD9e';
+  const agentId = process.env.A2A_AGENT_ID;
 
   const agentCard = {
-    agent_id: `eip155:${chainId}:${wallet.address}`,
+    type: 'https://eips.ethereum.org/EIPS/eip-8004#registration-v1',
     name: process.env.AGENT_NAME ?? 'AIOracleAgent',
     description:
       process.env.AGENT_DESCRIPTION ??
       'AI oracle agent specialized in ETH news sentiment execution',
-    capabilities: ['data_analysis', 'onchain_query', 'sentiment_classification'],
-    evm_address: wallet.address,
-    schemas: ['erc8004/identity/v1'],
+    image:
+      process.env.AGENT_IMAGE ??
+      'https://raw.githubusercontent.com/erc-8004/erc-8004-contracts/master/assets/erc8004.png',
+    services: [
+      {
+        name: 'A2A',
+        endpoint:
+          process.env.AGENT_A2A_ENDPOINT ??
+          'https://localhost/.well-known/agent-card.json',
+        version: process.env.AGENT_A2A_VERSION ?? '0.3.0',
+      },
+      {
+        name: 'EVM',
+        endpoint: wallet.address,
+      },
+    ],
+    x402Support: false,
+    active: true,
+    registrations: agentId
+      ? [
+          {
+            agentId: Number(agentId),
+            agentRegistry: `eip155:${chainId}:${identityRegistryAddress}`,
+          },
+        ]
+      : [],
+    supportedTrust: ['reputation', 'validation'],
   };
 
   const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {

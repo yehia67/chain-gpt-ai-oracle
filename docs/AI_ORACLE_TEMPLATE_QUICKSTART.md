@@ -73,7 +73,7 @@ Compile contracts:
 pnpm hardhat:compile
 ```
 
-Deploy Identity/Validation/Reputation + trade executor:
+Deploy validation + trade executor:
 
 ```bash
 pnpm hardhat:deploy:sepolia
@@ -89,6 +89,10 @@ Use output addresses to set:
 - `A2A_VALIDATION_REGISTRY_ADDRESS`
 - `A2A_REPUTATION_REGISTRY_ADDRESS`
 - `CONTRACT_ADDRESS`
+
+Notes:
+- Identity/Reputation default to canonical ERC-8004 Sepolia singleton addresses if not overridden.
+- Validation is project-local in this implementation.
 
 Optional explorer verification:
 
@@ -114,11 +118,10 @@ AGENT_URI=ipfs://... pnpm agent:register
 
 The card includes:
 
-- `agent_id` (CAIP-10 style)
-- `name`, `description`
-- `capabilities`
-- `evm_address`
-- schema tag `erc8004/identity/v1`
+- `type`, `name`, `description`, `image`
+- `services` (A2A + EVM endpoint metadata)
+- `registrations` (`agentRegistry` + `agentId` when available)
+- `supportedTrust`
 
 ---
 
@@ -204,9 +207,9 @@ For tasks with `BUY` or `SELL`:
 
 ## 9. Smart Contract Interfaces (Deployed)
 
-- `IdentityRegistry`: `registerAgent`, `getAgent`
+- `IdentityRegistry` (ERC-8004): `register(string)`, `tokenURI(uint256)`
 - `ValidationRegistry`: `requestValidation`, `submitValidationResponse`, `getValidation`, `isVerified`
-- `ReputationRegistry`: `submitFeedback`, `getFeedback`
+- `ReputationRegistry` (ERC-8004): `giveFeedback`, `getLastIndex`, `readFeedback`
 - `MockTradeExecutorV2`: `buy(uint256)`, `sell(uint256)` with validation gate + replay protection
 
 ---

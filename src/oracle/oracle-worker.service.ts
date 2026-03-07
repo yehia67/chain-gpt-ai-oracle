@@ -172,10 +172,18 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
         feedbackPayload,
       );
 
-      await this.a2aService.submitFeedback(
-        this.a2aService.getSignerAddress(),
-        feedbackUri,
-      );
+      try {
+        await this.a2aService.submitFeedback(
+          this.a2aService.getSignerAddress(),
+          feedbackUri,
+        );
+      } catch (feedbackError: unknown) {
+        const feedbackMessage =
+          feedbackError instanceof Error
+            ? feedbackError.message
+            : 'Unknown feedback submission error';
+        this.logger.warn(`${logPrefix} Feedback submission skipped: ${feedbackMessage}`);
+      }
 
       await this.prismaService.oracleTask.update({
         where: { taskId: task.taskId },

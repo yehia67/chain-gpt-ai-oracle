@@ -30,6 +30,7 @@ export class A2aService {
   private readonly reputationRegistry: Contract;
   private readonly validatorAddress: string;
   private readonly pinataJwt: string;
+  private readonly agentId?: bigint;
 
   constructor(private readonly configService: ConfigService) {
     const rpcUrl = this.configService.getOrThrow<string>('RPC_URL');
@@ -49,6 +50,11 @@ export class A2aService {
     this.validatorAddress =
       this.configService.get<string>('VALIDATOR_ADDRESS') ?? this.signer.address;
     this.pinataJwt = this.configService.getOrThrow<string>('PINATA_JWT');
+    const configuredAgentId = this.configService.get<string>('A2A_AGENT_ID');
+    this.agentId =
+      configuredAgentId !== undefined && configuredAgentId !== ''
+        ? BigInt(configuredAgentId)
+        : undefined;
 
     this.identityRegistry = new Contract(
       identityRegistryAddress,
@@ -73,7 +79,13 @@ export class A2aService {
 
   async registerAgent(agentAddress: string, agentUri: string): Promise<string> {
     try {
-      const tx = await this.identityRegistry.registerAgent(agentAddress, agentUri);
+      if (agentAddress.toLowerCase() !== this.signer.address.toLowerCase()) {
+        this.logger.warn(
+          `Ignoring agentAddress=${agentAddress}; ERC-8004 register() mints to caller address ${this.signer.address}`,
+        );
+      }
+
+      const tx = await this.identityRegistry.register(agentUri);
       await tx.wait();
       return tx.hash as string;
     } catch (err: unknown) {
@@ -82,7 +94,9 @@ export class A2aService {
   }
 
   async getAgent(agentAddress: string): Promise<string> {
-    return (await this.identityRegistry.getAgent(agentAddress)) as string;
+    void agentAddress;
+    const agentId = this.getConfiguredAgentId();
+    return (await this.identityRegistry.tokenURI(agentId)) as string;
   }
 
   async requestValidation(
@@ -160,10 +174,20 @@ export class A2aService {
     clientAddress = this.signer.address,
   ): Promise<string> {
     try {
-      const tx = await this.reputationRegistry.submitFeedback(
-        clientAddress,
-        serverAddress,
+      void serverAddress;
+      void clientAddress;
+
+      const agentId = this.getConfiguredAgentId();
+      const feedbackHash = ethers.keccak256(ethers.toUtf8Bytes(feedbackUri));
+      const tx = await this.reputationRegistry.giveFeedback(
+        agentId,
+        100, // normalized success score
+        0,
+        'execution',
+        'news-sentiment',
+        '',
         feedbackUri,
+        feedbackHash,
       );
       await tx.wait();
       return tx.hash as string;
@@ -173,7 +197,31 @@ export class A2aService {
   }
 
   async getFeedback(serverAddress: string): Promise<string[]> {
-    return (await this.reputationRegistry.getFeedback(serverAddress)) as string[];
+    const agentId = this.getConfiguredAgentId();
+    const lastIndex = (await this.reputationRegistry.getLastIndex(
+      agentId,
+      serverAddress,
+    )) as bigint;
+    const feedback: string[] = [];
+
+    for (let i = 1n; i <= lastIndex; i += 1n) {
+      const item = (await this.reputationRegistry.readFeedback(
+        agentId,
+        serverAddress,
+        i,
+      )) as [bigint, number, string, string, boolean];
+      feedback.push(
+        JSON.stringify({
+          value: item[0].toString(),
+          valueDecimals: item[1],
+          tag1: item[2],
+          tag2: item[3],
+          isRevoked: item[4],
+        }),
+      );
+    }
+
+    return feedback;
   }
 
   async pinJson(name: string, payload: Record<string, unknown>): Promise<string> {
@@ -198,5 +246,15 @@ export class A2aService {
 
     const data = (await response.json()) as PinataPinResponse;
     return `ipfs://${data.IpfsHash}`;
+  }
+
+  private getConfiguredAgentId(): bigint {
+    if (this.agentId === undefined) {
+      throw new OracleExecutionError(
+        'A2A_AGENT_ID is required for ERC-8004 identity/reputation calls',
+      );
+    }
+
+    return this.agentId;
   }
 }

@@ -1,20 +1,27 @@
 export const IDENTITY_REGISTRY_ABI = [
   {
-    inputs: [
-      { internalType: 'address', name: 'agentAddress', type: 'address' },
-      { internalType: 'string', name: 'agentURI', type: 'string' },
-    ],
-    name: 'registerAgent',
-    outputs: [],
+    inputs: [{ internalType: 'string', name: 'agentURI', type: 'string' }],
+    name: 'register',
+    outputs: [{ internalType: 'uint256', name: 'agentId', type: 'uint256' }],
     stateMutability: 'nonpayable',
     type: 'function',
   },
   {
-    inputs: [{ internalType: 'address', name: 'agentAddress', type: 'address' }],
-    name: 'getAgent',
-    outputs: [{ internalType: 'string', name: 'agentURI', type: 'string' }],
+    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
+    name: 'tokenURI',
+    outputs: [{ internalType: 'string', name: '', type: 'string' }],
     stateMutability: 'view',
     type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'agentId', type: 'uint256' },
+      { indexed: false, internalType: 'string', name: 'agentURI', type: 'string' },
+      { indexed: true, internalType: 'address', name: 'owner', type: 'address' },
+    ],
+    name: 'Registered',
+    type: 'event',
   },
 ] as const;
 
@@ -60,19 +67,44 @@ export const VALIDATION_REGISTRY_ABI = [
 export const REPUTATION_REGISTRY_ABI = [
   {
     inputs: [
-      { internalType: 'address', name: 'client', type: 'address' },
-      { internalType: 'address', name: 'server', type: 'address' },
+      { internalType: 'uint256', name: 'agentId', type: 'uint256' },
+      { internalType: 'int128', name: 'value', type: 'int128' },
+      { internalType: 'uint8', name: 'valueDecimals', type: 'uint8' },
+      { internalType: 'string', name: 'tag1', type: 'string' },
+      { internalType: 'string', name: 'tag2', type: 'string' },
+      { internalType: 'string', name: 'endpoint', type: 'string' },
       { internalType: 'string', name: 'feedbackURI', type: 'string' },
+      { internalType: 'bytes32', name: 'feedbackHash', type: 'bytes32' },
     ],
-    name: 'submitFeedback',
+    name: 'giveFeedback',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
   {
-    inputs: [{ internalType: 'address', name: 'server', type: 'address' }],
-    name: 'getFeedback',
-    outputs: [{ internalType: 'string[]', name: 'feedbackURIs', type: 'string[]' }],
+    inputs: [
+      { internalType: 'uint256', name: 'agentId', type: 'uint256' },
+      { internalType: 'address', name: 'clientAddress', type: 'address' },
+    ],
+    name: 'getLastIndex',
+    outputs: [{ internalType: 'uint64', name: '', type: 'uint64' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'agentId', type: 'uint256' },
+      { internalType: 'address', name: 'clientAddress', type: 'address' },
+      { internalType: 'uint64', name: 'feedbackIndex', type: 'uint64' },
+    ],
+    name: 'readFeedback',
+    outputs: [
+      { internalType: 'int128', name: 'value', type: 'int128' },
+      { internalType: 'uint8', name: 'valueDecimals', type: 'uint8' },
+      { internalType: 'string', name: 'tag1', type: 'string' },
+      { internalType: 'string', name: 'tag2', type: 'string' },
+      { internalType: 'bool', name: 'isRevoked', type: 'bool' },
+    ],
     stateMutability: 'view',
     type: 'function',
   },

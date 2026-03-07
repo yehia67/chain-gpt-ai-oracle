@@ -43,39 +43,4 @@ describe('A2A ERC-8004 MVP contracts', () => {
       'ValidationAlreadyConsumed',
     );
   });
-
-  it('registers and resolves identities', async () => {
-    const [agent, other] = await ethers.getSigners();
-
-    const IdentityRegistry = await ethers.getContractFactory('IdentityRegistry');
-    const identity = await IdentityRegistry.deploy();
-    await identity.waitForDeployment();
-
-    await expect(
-      identity.connect(other).registerAgent(agent.address, 'ipfs://agent-card'),
-    ).to.be.revertedWithCustomError(identity, 'UnauthorizedRegistrar');
-
-    await identity.connect(agent).registerAgent(agent.address, 'ipfs://agent-card');
-
-    expect(await identity.getAgent(agent.address)).to.equal('ipfs://agent-card');
-  });
-
-  it('stores feedback URIs by server', async () => {
-    const [client, server, other] = await ethers.getSigners();
-
-    const ReputationRegistry = await ethers.getContractFactory('ReputationRegistry');
-    const reputation = await ReputationRegistry.deploy();
-    await reputation.waitForDeployment();
-
-    await expect(
-      reputation.connect(other).submitFeedback(client.address, server.address, 'ipfs://fbk-1'),
-    ).to.be.revertedWithCustomError(reputation, 'UnauthorizedClient');
-
-    await reputation
-      .connect(client)
-      .submitFeedback(client.address, server.address, 'ipfs://fbk-1');
-
-    const feedback = await reputation.getFeedback(server.address);
-    expect(feedback).to.deep.equal(['ipfs://fbk-1']);
-  });
 });

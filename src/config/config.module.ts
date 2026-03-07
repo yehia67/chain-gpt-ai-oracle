@@ -18,6 +18,7 @@ import * as Joi from 'joi';
         DATABASE_URL: Joi.string().required(),
         CHAIN_ID: Joi.number().integer().default(11155111),
         VALIDATOR_ADDRESS: Joi.string().optional(),
+        A2A_AGENT_ID: Joi.string().optional(),
         WORKER_POLL_MS: Joi.number().integer().min(1000).default(10000),
       }),
     }),

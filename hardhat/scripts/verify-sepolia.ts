@@ -28,13 +28,16 @@ async function main() {
   const raw = fs.readFileSync(deploymentPath, 'utf8');
   const deployment = JSON.parse(raw) as DeploymentOutput;
 
-  await verify(deployment.identityRegistry, []);
   await verify(deployment.validationRegistry, [deployment.validator]);
-  await verify(deployment.reputationRegistry, []);
   await verify(deployment.mockTradeExecutorV2, [
     deployment.oracle,
     deployment.validationRegistry,
   ]);
+
+  if (process.env.VERIFY_ERC8004_REGISTRIES === 'true') {
+    await verify(deployment.identityRegistry, []);
+    await verify(deployment.reputationRegistry, []);
+  }
 }
 
 main().catch((error) => {

@@ -8,6 +8,10 @@ This version introduces an ERC-8004-style A2A trust layer on Sepolia:
 - Reputation Registry
 - Validation-gated trade execution (`buy/sell` only after verified validation)
 
+Canonical ERC-8004 Sepolia registry addresses:
+- IdentityRegistry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
+- ReputationRegistry: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
+
 ## High-Level Flow
 
 ```text
@@ -44,9 +48,22 @@ Example create response:
 ## Install
 
 ```bash
+git submodule update --init --recursive
 pnpm install
 pnpm prisma:generate
 ```
+
+## Hardhat + GitHub Imports (Correct Pattern)
+
+Do not import Solidity over raw GitHub URLs.
+
+Use a local dependency path (submodule/vendor/package) and import from that path, for example:
+
+```solidity
+import "../vendor/erc-8004-contracts/contracts/ValidationRegistryUpgradeable.sol";
+```
+
+This repo vendors the official source at `vendor/erc-8004-contracts`.
 
 ## Database
 
@@ -75,6 +92,10 @@ This writes `deployments/sepolia.json` with:
 - `A2A_REPUTATION_REGISTRY_ADDRESS`
 - `CONTRACT_ADDRESS` (`MockTradeExecutorV2`)
 
+Notes:
+- Identity/Reputation default to canonical ERC-8004 Sepolia addresses unless overridden in env.
+- Validation is still project-local by default and is deployed by this script unless `A2A_VALIDATION_REGISTRY_ADDRESS` is provided.
+
 Optional explorer verification:
 
 ```bash
@@ -93,6 +114,12 @@ Register URI on-chain:
 
 ```bash
 AGENT_URI=ipfs://... pnpm agent:register
+```
+
+The command prints the minted `Agent ID`; set it in `.env`:
+
+```bash
+A2A_AGENT_ID=<printed_agent_id>
 ```
 
 ## Run Backend
@@ -124,12 +151,12 @@ Services:
 
 ## Contract Suite
 
-- `IdentityRegistry.sol`
-- `ValidationRegistry.sol`
-- `ReputationRegistry.sol`
+- Official ERC-8004 contracts are vendored in `vendor/erc-8004-contracts`.
+- This project deploys and uses:
+- `ValidationRegistry.sol` (project-local validation gate)
 - `MockTradeExecutorV2.sol`
 
-All under `/contracts` and tested through Hardhat tests under `/hardhat/test`.
+Project-local contracts are under `/contracts` and tested through Hardhat tests under `/hardhat/test`.
 
 ## Tests
 

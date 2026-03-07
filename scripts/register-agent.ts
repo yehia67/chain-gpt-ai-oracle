@@ -4,13 +4,22 @@ import { Contract, JsonRpcProvider, Wallet } from 'ethers';
 const IDENTITY_REGISTRY_ABI = [
   {
     inputs: [
-      { internalType: 'address', name: 'agentAddress', type: 'address' },
       { internalType: 'string', name: 'agentURI', type: 'string' },
     ],
-    name: 'registerAgent',
-    outputs: [],
+    name: 'register',
+    outputs: [{ internalType: 'uint256', name: 'agentId', type: 'uint256' }],
     stateMutability: 'nonpayable',
     type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'uint256', name: 'agentId', type: 'uint256' },
+      { indexed: false, internalType: 'string', name: 'agentURI', type: 'string' },
+      { indexed: true, internalType: 'address', name: 'owner', type: 'address' },
+    ],
+    name: 'Registered',
+    type: 'event',
   },
 ] as const;
 
@@ -31,10 +40,31 @@ async function main() {
 
   const contract = new Contract(identityRegistryAddress, IDENTITY_REGISTRY_ABI, wallet);
 
-  const tx = await contract.registerAgent(wallet.address, agentUri);
-  await tx.wait();
+  const tx = await contract.register(agentUri);
+  const receipt = await tx.wait();
 
-  console.log(`Agent registered: ${wallet.address}`);
+  let agentId: bigint | null = null;
+  if (receipt) {
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog({
+          topics: [...log.topics],
+          data: log.data,
+        });
+        if (parsed?.name === 'Registered') {
+          agentId = parsed.args.agentId as bigint;
+          break;
+        }
+      } catch {
+        // ignore non-matching logs
+      }
+    }
+  }
+
+  console.log(`Agent owner: ${wallet.address}`);
+  if (agentId !== null) {
+    console.log(`Agent ID: ${agentId.toString()}`);
+  }
   console.log(`Tx hash: ${tx.hash}`);
 }
 
