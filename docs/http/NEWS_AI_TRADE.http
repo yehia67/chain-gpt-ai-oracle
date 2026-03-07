@@ -1,5 +1,10 @@
-//# then: POST http://localhost:3000/oracle/news
-### Trigger the news sentiment oracle
+### Trigger async oracle task
 POST http://localhost:3000/oracle/news
 Content-Type: application/json
 
+### Query task status
+# Replace {taskId} with the value returned by POST /oracle/news
+GET http://localhost:3000/oracle/tasks/{taskId}
+
+### Health check
+GET http://localhost:3000/health

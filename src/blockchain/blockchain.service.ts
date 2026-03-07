@@ -8,6 +8,7 @@ import { OracleExecutionError } from '../core/oracle-execution.error';
 export interface BlockchainResult {
   txHash: string;
   action: string;
+  validationRequestId: string;
 }
 
 @Injectable()
@@ -32,22 +33,34 @@ export class BlockchainService {
     );
   }
 
-  async executeAction(action: OracleAction): Promise<BlockchainResult | null> {
+  async executeAction(
+    action: OracleAction,
+    validationRequestId: bigint | null,
+    taskId?: string,
+  ): Promise<BlockchainResult | null> {
     if (action.type === 'NO_ACTION') {
-      this.logger.log('Action is NO_ACTION — skipping blockchain execution');
+      this.logger.log('Action is NO_ACTION - skipping blockchain execution');
       return null;
     }
 
+    if (validationRequestId === null) {
+      throw new OracleExecutionError(
+        `Cannot execute ${action.type} without a validationRequestId`,
+      );
+    }
+
     const methodName = action.type === 'BUY' ? 'buy' : 'sell';
-    this.logger.log(`Executing contract method: ${methodName}()`);
+    this.logger.log(
+      `[taskId=${taskId ?? 'n/a'}] Executing ${methodName}(${validationRequestId.toString()})`,
+    );
 
     let tx: ethers.TransactionResponse;
     try {
       tx = await (
         this.contract[methodName] as (
-          ...args: unknown[]
+          requestId: bigint,
         ) => Promise<ethers.TransactionResponse>
-      )();
+      )(validationRequestId);
     } catch (err: unknown) {
       throw new OracleExecutionError(
         `Transaction failed for action ${action.type}`,
@@ -55,10 +68,18 @@ export class BlockchainService {
       );
     }
 
-    this.logger.log(`Transaction submitted: ${tx.hash}`);
+    this.logger.log(
+      `[taskId=${taskId ?? 'n/a'}] Transaction submitted: ${tx.hash}`,
+    );
     await tx.wait();
-    this.logger.log(`Transaction confirmed: ${tx.hash}`);
+    this.logger.log(
+      `[taskId=${taskId ?? 'n/a'}] Transaction confirmed: ${tx.hash}`,
+    );
 
-    return { txHash: tx.hash, action: action.type };
+    return {
+      txHash: tx.hash,
+      action: action.type,
+      validationRequestId: validationRequestId.toString(),
+    };
   }
 }

@@ -9,6 +9,7 @@ import { OracleExecutionError } from './oracle-execution.error';
 
 export interface OracleResult {
   action: OracleAction;
+  decision: OracleDecision;
   rawResponse: string;
 }
 
@@ -46,6 +47,6 @@ export class AIOracleEngine {
     const action = strategy.mapToTransaction(decision);
     this.logger.log(`Decision mapped to action: ${action.type}`);
 
-    return { action, rawResponse };
+    return { action, decision, rawResponse };
   }
 }

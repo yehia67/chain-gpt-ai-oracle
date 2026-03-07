@@ -1,0 +1,48 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "MockTradeExecutor",
+  "sourceName": "contracts/MockTradeExecutor.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "NotOracle",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "action",
+          "type": "string"
+        }
+      ],
+      "name": "TradeExecuted",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "buy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "sell",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b5061010e806100206000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c806345710074146037578063a6f2ae3a14603f575b600080fd5b603d6045565b005b603d6094565b7f716fc2beb340c020954671f86fb23241fc9850cf6ab02f6d5d700386e34c2000604051608a9060208082526004908201526314d1531360e21b604082015260600190565b60405180910390a1565b7f716fc2beb340c020954671f86fb23241fc9850cf6ab02f6d5d700386e34c2000604051608a9060208082526003908201526242555960e81b60408201526060019056fea26469706673582212203588c0332bc9214ae676d23968d28edb567374074c706f6f2b295cd50c22d6cf64736f6c63430008180033",
+  "deployedBytecode": "0x6080604052348015600f57600080fd5b506004361060325760003560e01c806345710074146037578063a6f2ae3a14603f575b600080fd5b603d6045565b005b603d6094565b7f716fc2beb340c020954671f86fb23241fc9850cf6ab02f6d5d700386e34c2000604051608a9060208082526004908201526314d1531360e21b604082015260600190565b60405180910390a1565b7f716fc2beb340c020954671f86fb23241fc9850cf6ab02f6d5d700386e34c2000604051608a9060208082526003908201526242555960e81b60408201526060019056fea26469706673582212203588c0332bc9214ae676d23968d28edb567374074c706f6f2b295cd50c22d6cf64736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
