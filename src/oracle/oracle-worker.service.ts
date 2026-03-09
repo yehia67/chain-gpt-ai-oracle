@@ -5,15 +5,11 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  OracleActionType,
-  TaskExecutionStatus,
-  TaskValidationStatus,
-} from '@prisma/client';
+import { TaskExecutionStatus, TaskValidationStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { A2aService } from '../a2a/a2a.service';
-import { BlockchainService } from '../blockchain/blockchain.service';
 import { OracleAction } from '../strategies/oracle-strategy.interface';
+import { X402ExecutionService } from '../x402/x402-execution.service';
 
 @Injectable()
 export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -26,7 +22,7 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly prismaService: PrismaService,
     private readonly a2aService: A2aService,
-    private readonly blockchainService: BlockchainService,
+    private readonly x402ExecutionService: X402ExecutionService,
   ) {
     this.pollIntervalMs = Number(
       this.configService.get('WORKER_POLL_MS') ?? 10_000,
@@ -39,7 +35,9 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
     }, this.pollIntervalMs);
 
     void this.processPendingTasks();
-    this.logger.log(`Oracle worker started with interval ${this.pollIntervalMs}ms`);
+    this.logger.log(
+      `Oracle worker started with interval ${this.pollIntervalMs}ms`,
+    );
   }
 
   onModuleDestroy(): void {
@@ -91,7 +89,9 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const task = await this.prismaService.oracleTask.findUnique({ where: { taskId } });
+    const task = await this.prismaService.oracleTask.findUnique({
+      where: { taskId },
+    });
     if (!task || task.validationRequestId === null || !task.dataHash) {
       return;
     }
@@ -101,7 +101,9 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
     try {
       this.logger.log(`${logPrefix} Processing task`);
 
-      let validation = await this.a2aService.getValidation(task.validationRequestId);
+      let validation = await this.a2aService.getValidation(
+        task.validationRequestId,
+      );
       let proofUri = validation.proofUri;
 
       if (!validation.responded) {
@@ -126,7 +128,9 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
           true,
         );
 
-        validation = await this.a2aService.getValidation(task.validationRequestId);
+        validation = await this.a2aService.getValidation(
+          task.validationRequestId,
+        );
       }
 
       if (!validation.verified) {
@@ -147,11 +151,13 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
         type: task.action as OracleAction['type'],
       };
 
-      const blockchainResult = await this.blockchainService.executeAction(
-        action,
-        task.validationRequestId,
-        task.taskId,
-      );
+      const executionReceipt =
+        await this.x402ExecutionService.executeSignedCondition({
+          action,
+          validationRequestId: task.validationRequestId,
+          taskId: task.taskId,
+          dataHash: task.dataHash,
+        });
 
       const feedbackPayload = {
         feedback_id: `fbk_${task.taskId}`,
@@ -182,7 +188,9 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
           feedbackError instanceof Error
             ? feedbackError.message
             : 'Unknown feedback submission error';
-        this.logger.warn(`${logPrefix} Feedback submission skipped: ${feedbackMessage}`);
+        this.logger.warn(
+          `${logPrefix} Feedback submission skipped: ${feedbackMessage}`,
+        );
       }
 
       await this.prismaService.oracleTask.update({
@@ -190,7 +198,11 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
         data: {
           validationStatus: TaskValidationStatus.VERIFIED,
           executionStatus: TaskExecutionStatus.EXECUTED,
-          txHash: blockchainResult?.txHash ?? null,
+          txHash: executionReceipt?.txHash ?? null,
+          x402ConditionHash: executionReceipt?.conditionHash ?? null,
+          x402ConditionSignature: executionReceipt?.conditionSignature ?? null,
+          x402SettlementRef: executionReceipt?.settlementRef ?? null,
+          x402ExecutionMode: executionReceipt?.mode ?? null,
           validationProofUri: proofUri,
           feedbackUri,
           errorMessage: null,
@@ -199,7 +211,8 @@ export class OracleWorkerService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`${logPrefix} Task executed successfully`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown worker error';
+      const message =
+        err instanceof Error ? err.message : 'Unknown worker error';
       this.logger.error(`${logPrefix} Worker task failed: ${message}`, err);
 
       await this.prismaService.oracleTask.update({

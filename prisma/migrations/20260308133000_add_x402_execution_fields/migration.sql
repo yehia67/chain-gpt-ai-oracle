@@ -1,0 +1,5 @@
+ALTER TABLE "OracleTask"
+ADD COLUMN "x402ConditionHash" VARCHAR(66),
+ADD COLUMN "x402ConditionSignature" VARCHAR(132),
+ADD COLUMN "x402SettlementRef" VARCHAR(191),
+ADD COLUMN "x402ExecutionMode" VARCHAR(32);

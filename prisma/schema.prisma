@@ -41,6 +41,10 @@ model OracleTask {
   validationStatus     TaskValidationStatus @default(NOT_REQUIRED)
   executionStatus      TaskExecutionStatus  @default(PENDING)
   txHash               String?              @db.VarChar(66)
+  x402ConditionHash    String?              @db.VarChar(66)
+  x402ConditionSignature String?            @db.VarChar(132)
+  x402SettlementRef    String?              @db.VarChar(191)
+  x402ExecutionMode    String?              @db.VarChar(32)
   validationProofUri   String?
   feedbackUri          String?
   errorMessage         String?

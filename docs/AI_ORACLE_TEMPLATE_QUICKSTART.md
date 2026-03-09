@@ -180,6 +180,8 @@ Response includes:
 - `validationRequestId`
 - `validationStatus`, `executionStatus`
 - `txHash`
+- `x402ConditionHash`, `x402ConditionSignature`
+- `x402SettlementRef`, `x402ExecutionMode`
 - `validationProofUri`, `feedbackUri`
 - `errorMessage`
 
@@ -199,9 +201,11 @@ For tasks with `BUY` or `SELL`:
 2. Call `requestValidation(...)` on Validation Registry.
 3. Worker checks validation state.
 4. If no response yet, worker pins proof JSON to IPFS and submits validator response.
-5. If verified, worker executes `buy(validationRequestId)` or `sell(validationRequestId)`.
-6. Worker pins feedback JSON and submits feedback URI to Reputation Registry.
-7. Task marked `EXECUTED`; else `REJECTED`/`FAILED`.
+5. If verified, worker builds and signs an X402 execution condition.
+6. Worker verifies and settles X402 condition (`local` mode) or via facilitator (`facilitator` mode).
+7. Worker executes `buy(validationRequestId)` or `sell(validationRequestId)`.
+8. Worker pins feedback JSON and submits feedback URI to Reputation Registry.
+9. Task marked `EXECUTED`; else `REJECTED`/`FAILED`.
 
 ---
 

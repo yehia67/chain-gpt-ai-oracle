@@ -25,6 +25,10 @@ export interface OracleTaskDetailsResponse {
   validationStatus: string;
   executionStatus: string;
   txHash: string | null;
+  x402ConditionHash: string | null;
+  x402ConditionSignature: string | null;
+  x402SettlementRef: string | null;
+  x402ExecutionMode: string | null;
   validationProofUri: string | null;
   feedbackUri: string | null;
   errorMessage: string | null;

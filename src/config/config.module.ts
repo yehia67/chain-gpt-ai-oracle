@@ -20,6 +20,11 @@ import * as Joi from 'joi';
         VALIDATOR_ADDRESS: Joi.string().optional(),
         A2A_AGENT_ID: Joi.string().optional(),
         WORKER_POLL_MS: Joi.number().integer().min(1000).default(10000),
+        X402_EXECUTION_MODE: Joi.string()
+          .valid('local', 'facilitator')
+          .default('local'),
+        X402_FACILITATOR_URL: Joi.string().uri().optional(),
+        X402_CONDITION_TTL_SEC: Joi.number().integer().min(30).default(300),
       }),
     }),
   ],

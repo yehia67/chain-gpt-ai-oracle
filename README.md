@@ -7,6 +7,7 @@ This version introduces an ERC-8004-style A2A trust layer on Sepolia:
 - Validation Registry
 - Reputation Registry
 - Validation-gated trade execution (`buy/sell` only after verified validation)
+- X402-style verifiable execution envelope (`signed condition -> verify/settle -> contract call`)
 
 Canonical ERC-8004 Sepolia registry addresses:
 - IdentityRegistry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
@@ -16,13 +17,14 @@ Canonical ERC-8004 Sepolia registry addresses:
 
 ```text
 ETH News -> ChainGPT Decision -> Task DataHash -> Validation Request
--> Validator Response -> Trade Execution -> Feedback Attestation
+-> Validator Response -> Signed X402 Condition -> X402 Verify/Settle
+-> Trade Execution -> Feedback Attestation
 ```
 
 ## API
 
 - `POST /oracle/news` -> creates async task (`202 Accepted`)
-- `GET /oracle/tasks/:taskId` -> returns lifecycle status + tx/proof metadata
+- `GET /oracle/tasks/:taskId` -> returns lifecycle status + tx/proof + X402 metadata
 - `GET /health` -> service health
 
 Example create response:
@@ -177,3 +179,8 @@ pnpm hardhat:test
 - Current default is single EOA for deployer/oracle/validator (centralized trust tradeoff).
 - `NO_ACTION` tasks are finalized immediately without validation/transaction.
 - `BUY/SELL` tasks require successful validation before execution.
+- `X402_EXECUTION_MODE=local` verifies and settles signed conditions in-process.
+- `X402_EXECUTION_MODE=facilitator` delegates verify/settle to `X402_FACILITATOR_URL`.
+- Facilitator mode calls:
+- `POST /verify` with `{ condition, conditionHash, signature, signer }` expecting `{ verified|valid|approved, verificationId? }`
+- `POST /settle` with `{ condition, conditionHash, signature, signer, txHash, verificationRef }` expecting `{ settlementId|id|reference|settlementRef }`
