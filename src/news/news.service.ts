@@ -13,9 +13,30 @@ interface AiNewsRow {
 }
 
 interface AiNewsResponse {
-  data: {
-    rows: AiNewsRow[];
-  };
+  data: AiNewsRow[];
+}
+
+function isAiNewsRow(value: unknown): value is AiNewsRow {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const row = value as Record<string, unknown>;
+
+  return (
+    (row.title === undefined || typeof row.title === 'string') &&
+    (row.description === undefined || typeof row.description === 'string')
+  );
+}
+
+function isAiNewsResponse(value: unknown): value is AiNewsResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const response = value as Record<string, unknown>;
+
+  return Array.isArray(response.data) && response.data.every(isAiNewsRow);
 }
 
 @Injectable()
@@ -32,7 +53,7 @@ export class NewsService {
   async getEthNews(): Promise<NewsItem[]> {
     this.logger.log('Fetching ETH news from ChainGPT AI News SDK');
 
-    const response = await this.ainews.getNews({
+    const response: unknown = await this.ainews.getNews({
       tokenId: [80],
       limit: 3,
       sortBy: 'createdAt',
@@ -40,16 +61,14 @@ export class NewsService {
 
     this.logger.debug(`Raw SDK response: ${JSON.stringify(response)}`);
 
-    const rawResponse = response as any;
-
-    if (!rawResponse?.data || !Array.isArray(rawResponse.data)) {
+    if (!isAiNewsResponse(response)) {
       this.logger.error(
         `Unexpected response structure: ${JSON.stringify(response)}`,
       );
       throw new Error('AI News SDK returned unexpected response structure');
     }
 
-    if (rawResponse.data.length === 0) {
+    if (response.data.length === 0) {
       this.logger.warn('No news items returned from AI News SDK');
       return [
         {
@@ -59,7 +78,7 @@ export class NewsService {
       ];
     }
 
-    const items: NewsItem[] = rawResponse.data.map((item: any) => ({
+    const items: NewsItem[] = response.data.map((item) => ({
       title: item.title ?? '',
       description: item.description ?? '',
     }));
