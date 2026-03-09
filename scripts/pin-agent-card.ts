@@ -60,19 +60,22 @@ async function main() {
     supportedTrust: ['reputation', 'validation'],
   };
 
-  const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${pinataJwt}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      pinataContent: agentCard,
-      pinataMetadata: {
-        name: `agent-card-${wallet.address.toLowerCase()}`,
+  const response = await fetch(
+    'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${pinataJwt}`,
+        'Content-Type': 'application/json',
       },
-    }),
-  });
+      body: JSON.stringify({
+        pinataContent: agentCard,
+        pinataMetadata: {
+          name: `agent-card-${wallet.address.toLowerCase()}`,
+        },
+      }),
+    },
+  );
 
   if (!response.ok) {
     const text = await response.text();

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Contract, ethers } from 'ethers';
+import { Contract, ethers, type ContractTransactionResponse } from 'ethers';
 import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
@@ -11,6 +11,54 @@ import { OracleExecutionError } from '../core/oracle-execution.error';
 interface PinataPinResponse {
   IpfsHash: string;
 }
+
+type IdentityRegistryContract = Contract & {
+  register(agentUri: string): Promise<ContractTransactionResponse>;
+  tokenURI(agentId: bigint): Promise<string>;
+};
+
+type ValidationRegistryContract = Contract & {
+  requestValidation: {
+    (
+      server: string,
+      dataHash: string,
+      validationType: string,
+    ): Promise<ContractTransactionResponse>;
+    staticCall(
+      server: string,
+      dataHash: string,
+      validationType: string,
+    ): Promise<bigint>;
+  };
+  submitValidationResponse(
+    requestId: bigint,
+    validator: string,
+    proofUri: string,
+    verified: boolean,
+  ): Promise<ContractTransactionResponse>;
+  getValidation(
+    requestId: bigint,
+  ): Promise<[boolean, string, boolean, string, bigint]>;
+};
+
+type ReputationRegistryContract = Contract & {
+  giveFeedback(
+    agentId: bigint,
+    value: number,
+    valueDecimals: number,
+    tag1: string,
+    tag2: string,
+    endpoint: string,
+    feedbackUri: string,
+    feedbackHash: string,
+  ): Promise<ContractTransactionResponse>;
+  getLastIndex(agentId: bigint, serverAddress: string): Promise<bigint>;
+  readFeedback(
+    agentId: bigint,
+    serverAddress: string,
+    index: bigint,
+  ): Promise<[bigint, number, string, string, boolean]>;
+};
 
 export interface ValidationSnapshot {
   verified: boolean;
@@ -25,9 +73,9 @@ export class A2aService {
   private readonly logger = new Logger(A2aService.name);
   private readonly provider: ethers.JsonRpcProvider;
   private readonly signer: ethers.Wallet;
-  private readonly identityRegistry: Contract;
-  private readonly validationRegistry: Contract;
-  private readonly reputationRegistry: Contract;
+  private readonly identityRegistry: IdentityRegistryContract;
+  private readonly validationRegistry: ValidationRegistryContract;
+  private readonly reputationRegistry: ReputationRegistryContract;
   private readonly validatorAddress: string;
   private readonly pinataJwt: string;
   private readonly agentId?: bigint;
@@ -48,7 +96,8 @@ export class A2aService {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.signer = new ethers.Wallet(privateKey, this.provider);
     this.validatorAddress =
-      this.configService.get<string>('VALIDATOR_ADDRESS') ?? this.signer.address;
+      this.configService.get<string>('VALIDATOR_ADDRESS') ??
+      this.signer.address;
     this.pinataJwt = this.configService.getOrThrow<string>('PINATA_JWT');
     const configuredAgentId = this.configService.get<string>('A2A_AGENT_ID');
     this.agentId =
@@ -60,17 +109,17 @@ export class A2aService {
       identityRegistryAddress,
       IDENTITY_REGISTRY_ABI,
       this.signer,
-    );
+    ) as IdentityRegistryContract;
     this.validationRegistry = new Contract(
       validationRegistryAddress,
       VALIDATION_REGISTRY_ABI,
       this.signer,
-    );
+    ) as ValidationRegistryContract;
     this.reputationRegistry = new Contract(
       reputationRegistryAddress,
       REPUTATION_REGISTRY_ABI,
       this.signer,
-    );
+    ) as ReputationRegistryContract;
   }
 
   getSignerAddress(): string {
@@ -85,9 +134,10 @@ export class A2aService {
         );
       }
 
-      const tx = await this.identityRegistry.register(agentUri);
+      const tx: ContractTransactionResponse =
+        await this.identityRegistry.register(agentUri);
       await tx.wait();
-      return tx.hash as string;
+      return tx.hash;
     } catch (err: unknown) {
       throw new OracleExecutionError('Failed to register agent identity', err);
     }
@@ -96,7 +146,7 @@ export class A2aService {
   async getAgent(agentAddress: string): Promise<string> {
     void agentAddress;
     const agentId = this.getConfiguredAgentId();
-    return (await this.identityRegistry.tokenURI(agentId)) as string;
+    return await this.identityRegistry.tokenURI(agentId);
   }
 
   async requestValidation(
@@ -105,24 +155,25 @@ export class A2aService {
   ): Promise<{ requestId: bigint; txHash: string }> {
     let requestId: bigint;
     try {
-      requestId = (await this.validationRegistry.requestValidation.staticCall(
-        this.signer.address,
-        dataHash,
-        validationType,
-      )) as bigint;
-
-      const tx = await this.validationRegistry.requestValidation(
+      requestId = await this.validationRegistry.requestValidation.staticCall(
         this.signer.address,
         dataHash,
         validationType,
       );
+
+      const tx: ContractTransactionResponse =
+        await this.validationRegistry.requestValidation(
+          this.signer.address,
+          dataHash,
+          validationType,
+        );
       await tx.wait();
 
       this.logger.log(
         `Validation requested requestId=${requestId.toString()} txHash=${tx.hash}`,
       );
 
-      return { requestId, txHash: tx.hash as string };
+      return { requestId, txHash: tx.hash };
     } catch (err: unknown) {
       throw new OracleExecutionError('Failed to request validation', err);
     }
@@ -134,14 +185,15 @@ export class A2aService {
     verified: boolean,
   ): Promise<string> {
     try {
-      const tx = await this.validationRegistry.submitValidationResponse(
-        requestId,
-        this.validatorAddress,
-        proofUri,
-        verified,
-      );
+      const tx: ContractTransactionResponse =
+        await this.validationRegistry.submitValidationResponse(
+          requestId,
+          this.validatorAddress,
+          proofUri,
+          verified,
+        );
       await tx.wait();
-      return tx.hash as string;
+      return tx.hash;
     } catch (err: unknown) {
       throw new OracleExecutionError(
         `Failed to submit validation response for requestId=${requestId.toString()}`,
@@ -151,13 +203,7 @@ export class A2aService {
   }
 
   async getValidation(requestId: bigint): Promise<ValidationSnapshot> {
-    const tuple = (await this.validationRegistry.getValidation(requestId)) as [
-      boolean,
-      string,
-      boolean,
-      string,
-      bigint,
-    ];
+    const tuple = await this.validationRegistry.getValidation(requestId);
 
     return {
       verified: tuple[0],
@@ -179,37 +225,41 @@ export class A2aService {
 
       const agentId = this.getConfiguredAgentId();
       const feedbackHash = ethers.keccak256(ethers.toUtf8Bytes(feedbackUri));
-      const tx = await this.reputationRegistry.giveFeedback(
-        agentId,
-        100, // normalized success score
-        0,
-        'execution',
-        'news-sentiment',
-        '',
-        feedbackUri,
-        feedbackHash,
-      );
+      const tx: ContractTransactionResponse =
+        await this.reputationRegistry.giveFeedback(
+          agentId,
+          100,
+          0,
+          'execution',
+          'news-sentiment',
+          '',
+          feedbackUri,
+          feedbackHash,
+        );
       await tx.wait();
-      return tx.hash as string;
+      return tx.hash;
     } catch (err: unknown) {
-      throw new OracleExecutionError('Failed to submit reputation feedback', err);
+      throw new OracleExecutionError(
+        'Failed to submit reputation feedback',
+        err,
+      );
     }
   }
 
   async getFeedback(serverAddress: string): Promise<string[]> {
     const agentId = this.getConfiguredAgentId();
-    const lastIndex = (await this.reputationRegistry.getLastIndex(
+    const lastIndex = await this.reputationRegistry.getLastIndex(
       agentId,
       serverAddress,
-    )) as bigint;
+    );
     const feedback: string[] = [];
 
     for (let i = 1n; i <= lastIndex; i += 1n) {
-      const item = (await this.reputationRegistry.readFeedback(
+      const item = await this.reputationRegistry.readFeedback(
         agentId,
         serverAddress,
         i,
-      )) as [bigint, number, string, string, boolean];
+      );
       feedback.push(
         JSON.stringify({
           value: item[0].toString(),
@@ -224,18 +274,24 @@ export class A2aService {
     return feedback;
   }
 
-  async pinJson(name: string, payload: Record<string, unknown>): Promise<string> {
-    const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.pinataJwt}`,
-        'Content-Type': 'application/json',
+  async pinJson(
+    name: string,
+    payload: Record<string, unknown>,
+  ): Promise<string> {
+    const response = await fetch(
+      'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.pinataJwt}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pinataMetadata: { name },
+          pinataContent: payload,
+        }),
       },
-      body: JSON.stringify({
-        pinataMetadata: { name },
-        pinataContent: payload,
-      }),
-    });
+    );
 
     if (!response.ok) {
       const body = await response.text();

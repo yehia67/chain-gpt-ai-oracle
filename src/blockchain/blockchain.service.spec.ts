@@ -2,6 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import { BlockchainService } from './blockchain.service';
 import { OracleExecutionError } from '../core/oracle-execution.error';
 
+type MockContract = {
+  buy: jest.Mock<Promise<never>, [bigint]>;
+  sell: jest.Mock<Promise<never>, [bigint]>;
+};
+
 describe('BlockchainService', () => {
   const getConfigService = () => {
     const env: Record<string, string> = {
@@ -33,13 +38,20 @@ describe('BlockchainService', () => {
   it('wraps contract call errors as OracleExecutionError', async () => {
     const service = new BlockchainService(getConfigService());
 
-    (service as any).contract = {
-      buy: jest.fn().mockRejectedValue(new Error('tx failed')),
-      sell: jest.fn(),
+    const mockedService = service as unknown as {
+      contract: MockContract;
+      executeAction: BlockchainService['executeAction'];
     };
 
-    await expect(service.executeAction({ type: 'BUY' }, 1n)).rejects.toBeInstanceOf(
-      OracleExecutionError,
-    );
+    mockedService.contract = {
+      buy: jest
+        .fn<Promise<never>, [bigint]>()
+        .mockRejectedValue(new Error('tx failed')),
+      sell: jest.fn<Promise<never>, [bigint]>(),
+    };
+
+    await expect(
+      mockedService.executeAction({ type: 'BUY' }, 1n),
+    ).rejects.toBeInstanceOf(OracleExecutionError);
   });
 });

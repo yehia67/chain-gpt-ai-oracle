@@ -24,7 +24,11 @@ async function verify(address: string, constructorArguments: unknown[]) {
 }
 
 async function main() {
-  const deploymentPath = path.join(process.cwd(), 'deployments', 'sepolia.json');
+  const deploymentPath = path.join(
+    process.cwd(),
+    'deployments',
+    'sepolia.json',
+  );
   const raw = fs.readFileSync(deploymentPath, 'utf8');
   const deployment = JSON.parse(raw) as DeploymentOutput;
 

@@ -51,7 +51,8 @@ async function main() {
   let validationRegistryAddress =
     process.env.A2A_VALIDATION_REGISTRY_ADDRESS ?? '';
   if (!validationRegistryAddress) {
-    const ValidationRegistry = await ethers.getContractFactory('ValidationRegistry');
+    const ValidationRegistry =
+      await ethers.getContractFactory('ValidationRegistry');
     const validationRegistry = await ValidationRegistry.deploy(validator);
     await validationRegistry.waitForDeployment();
     validationRegistryAddress = await validationRegistry.getAddress();
@@ -66,7 +67,9 @@ async function main() {
     process.env.A2A_REPUTATION_REGISTRY_ADDRESS ??
     ERC8004_SEPOLIA_REPUTATION_REGISTRY;
 
-  const MockTradeExecutorV2 = await ethers.getContractFactory('MockTradeExecutorV2');
+  const MockTradeExecutorV2 = await ethers.getContractFactory(
+    'MockTradeExecutorV2',
+  );
   const mockTradeExecutorV2 = await MockTradeExecutorV2.deploy(
     oracle,
     validationRegistryAddress,

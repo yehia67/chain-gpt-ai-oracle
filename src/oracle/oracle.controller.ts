@@ -23,7 +23,9 @@ export class OracleController {
   }
 
   @Get('tasks/:taskId')
-  async getTask(@Param('taskId') taskId: string): Promise<OracleTaskDetailsResponse> {
+  async getTask(
+    @Param('taskId') taskId: string,
+  ): Promise<OracleTaskDetailsResponse> {
     return this.oracleTaskService.getTask(taskId);
   }
 }

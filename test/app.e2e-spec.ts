@@ -5,6 +5,11 @@ import { App } from 'supertest/types';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 
+interface HealthResponseBody {
+  status: string;
+  timestamp: string;
+}
+
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
@@ -30,8 +35,9 @@ describe('AppController (e2e)', () => {
       .get('/health')
       .expect(200)
       .expect((res) => {
-        expect(res.body.status).toBe('ok');
-        expect(typeof res.body.timestamp).toBe('string');
+        const body = res.body as HealthResponseBody;
+        expect(body.status).toBe('ok');
+        expect(typeof body.timestamp).toBe('string');
       });
   });
 });

@@ -1,11 +1,17 @@
 import 'dotenv/config';
-import { Contract, JsonRpcProvider, Wallet } from 'ethers';
+import {
+  Contract,
+  JsonRpcProvider,
+  Wallet,
+  type ContractTransactionReceipt,
+  type ContractTransactionResponse,
+  type EventLog,
+  type Log,
+} from 'ethers';
 
 const IDENTITY_REGISTRY_ABI = [
   {
-    inputs: [
-      { internalType: 'string', name: 'agentURI', type: 'string' },
-    ],
+    inputs: [{ internalType: 'string', name: 'agentURI', type: 'string' }],
     name: 'register',
     outputs: [{ internalType: 'uint256', name: 'agentId', type: 'uint256' }],
     stateMutability: 'nonpayable',
@@ -14,14 +20,33 @@ const IDENTITY_REGISTRY_ABI = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: 'uint256', name: 'agentId', type: 'uint256' },
-      { indexed: false, internalType: 'string', name: 'agentURI', type: 'string' },
-      { indexed: true, internalType: 'address', name: 'owner', type: 'address' },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'agentId',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'string',
+        name: 'agentURI',
+        type: 'string',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'owner',
+        type: 'address',
+      },
     ],
     name: 'Registered',
     type: 'event',
   },
 ] as const;
+
+type IdentityRegistryContract = Contract & {
+  register(agentUri: string): Promise<ContractTransactionResponse>;
+};
 
 async function main() {
   const rpcUrl = process.env.RPC_URL;
@@ -38,10 +63,14 @@ async function main() {
   const provider = new JsonRpcProvider(rpcUrl);
   const wallet = new Wallet(privateKey, provider);
 
-  const contract = new Contract(identityRegistryAddress, IDENTITY_REGISTRY_ABI, wallet);
+  const contract = new Contract(
+    identityRegistryAddress,
+    IDENTITY_REGISTRY_ABI,
+    wallet,
+  ) as IdentityRegistryContract;
 
   const tx = await contract.register(agentUri);
-  const receipt = await tx.wait();
+  const receipt: ContractTransactionReceipt | null = await tx.wait();
 
   let agentId: bigint | null = null;
   if (receipt) {
@@ -50,9 +79,10 @@ async function main() {
         const parsed = contract.interface.parseLog({
           topics: [...log.topics],
           data: log.data,
-        });
+        } as unknown as Log | EventLog);
         if (parsed?.name === 'Registered') {
-          agentId = parsed.args.agentId as bigint;
+          const eventArgs = parsed.args as unknown as { agentId: bigint };
+          agentId = eventArgs.agentId;
           break;
         }
       } catch {
